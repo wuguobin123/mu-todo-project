@@ -1,29 +1,32 @@
-name: 'GitHub Actions Weather Bot'
-
+name: schedule-email
 on:
-  push:
   schedule:
-    - cron: '0 21 * * *'
-
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 1 * * *' # Change this to your time
+  push:
+    branches:
+      - master # Change this to your default branch
 jobs:
-  bot:
+  make-html-send-email:
+    name: make-html-send-email
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout codes'
-        uses: actions/checkout@v1
-      - name: 'Get Weather'
-        run: bash ./weather.sh
-      - name: 'Get Date'
-        run: echo "REPORT_DATE=$(TZ=':Asia/Beijing' date '+%Y-%m-%d %T')" >> $GITHUB_ENV
-      - name: 'Send mail'
-        uses: dawidd6/action-send-mail@master
-        with:
-          server_address: smtp.163.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Beijing Weather Report (${{env.REPORT_DATE}})
-          body: file://result.html
-          to: wgblearn@163.com
-          from: GitHub Actions
-          content_type: text/html
+    - name: Checkout repository
+      uses: actions/checkout@master
+    - name: Set up Node.js
+      uses: actions/setup-node@master
+      with:
+        node-version: 10.0.0
+    - run: npm install -g todo-plus-parser
+    - run: todo-plus-parser -i "./" -o "./out.html"
+    - name: send-email
+      uses: bmpi-dev/action-send-mail@master
+      with:
+        server_address: smtp.163.com
+        server_port: 465
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        subject: TODO++
+        body: file://out.html
+        to: wgblearn@163.com
+        from: GitHub Actions
