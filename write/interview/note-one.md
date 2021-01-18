@@ -45,3 +45,25 @@ var arr = [3, 1, 12, 43, 23, 11];
 console.log(quickSort(arr));
 ```
 
+3、利用归并算法进行排序
+```
+function _mergeOrderArr(arr1, arr2) {
+    var res = [];
+    while (arr1.length && arr2.length) {
+        res.push((arr1[0] < arr2[0] ? arr1 : arr2).shift());
+    }
+    return [...res, ...arr1, ...arr2];
+}
+
+function mergeSort(arr) {
+    if (arr.length <= 1) {
+        return arr;
+    }
+    var midIndex = arr.length >> 1;
+    var leftPart = mergeSort(arr.slice(0, midIndex));
+    var rightPart = mergeSort(arr.slice(midIndex, arr.length));
+    return _mergeOrderArr(leftPart, rightPart);
+}
+var arr = [3, 1, 12, 43, 23, 11];
+console.log(mergeSort(arr));
+```
