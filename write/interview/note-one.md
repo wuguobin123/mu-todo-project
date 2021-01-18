@@ -156,3 +156,18 @@ function getPositions(arr, target) {
 var arr = [2, 3, 6, 7, 7, 7, 9, 10];
 console.log(getPositions(arr, 7));
 ```
+
+10、删除有序数组的重复项
+```
+function removeDuplicates(arr) {
+    var i = 0;
+    for (var j = 1, len = arr.length; j < len; j++) {
+        if (arr[i] !== arr[j]) {
+            i++;
+            arr[i] = arr[j];
+        }
+    }
+    return i + 1;
+}
+var arr = [1, 3, 5, 5, 5, 7];
+```
