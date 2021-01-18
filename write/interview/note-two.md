@@ -16,3 +16,5 @@ function reverseList(head) {
     return pre;
 }
 ```
+
+2、找到两个链表公共部分的起始结点

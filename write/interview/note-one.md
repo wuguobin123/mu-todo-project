@@ -127,3 +127,32 @@ function combine(arr) {
 var arr = [1, 2, 3];
 console.log(combine(arr));
 ```
+
+9、给定一个按照升序排列的整数数组 nums，和一个目标值 target。找出给定目标值在数组的开始位置和结束位置。你的算法时间复杂度必须是 O(log n) 级别
+```
+function getPositions(arr, target) {
+    var start = 0, end = arr.length - 1;
+    var index = -1;
+    while (start <= end) {
+        var mid = (start + end) >> 1;
+        if (arr[mid] === target) {
+            index = mid;
+            break;
+        } else if (arr[mid] < target) {
+            start = mid + 1;
+        } else {
+            end = mid - 1;
+        }
+    }
+    var left = index, right = index;
+    while (arr[left - 1] === target) {
+        left--;
+    }
+    while (arr[right + 1] === target) {
+        right++;
+    }
+    return [left, right];
+}
+var arr = [2, 3, 6, 7, 7, 7, 9, 10];
+console.log(getPositions(arr, 7));
+```
