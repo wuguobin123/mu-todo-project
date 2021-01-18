@@ -102,3 +102,28 @@ function getMaxCount(arr) {
 var arr = [1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1 ,1, 1, 1, 1, 1, 1];
 console.log(getMaxCount(arr));
 ```
+
+8、利用广度优先获取全数组排序
+```
+function _combine(arr, temp, res) {
+    if (arr.length === temp.length) {
+        res.push(temp);
+        return;
+    }
+    for (var i = 0, len = arr.length; i < len; i++) {
+        if (!temp.includes(arr[i])) {
+            temp.push(arr[i]);
+            _combine(arr, JSON.parse(JSON.stringify(temp)), res);
+            temp.pop();
+        }
+    }
+}
+
+function combine(arr) {
+   var res = [];
+   _combine(arr, [], res);
+   return res;
+}
+var arr = [1, 2, 3];
+console.log(combine(arr));
+```
