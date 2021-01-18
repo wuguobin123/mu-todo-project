@@ -21,6 +21,22 @@ function reverseList(head) {
 
 3、遍历多叉树
 ```
+function _levelOrder(node, res, level) {
+    if (!node) {
+        return;
+    }
+    if (!res[level]) {
+        res[level] = [];
+    }
+    res[level].push(node.val);
+    for (var i = 0, len = node.children.length; i < len; i++) {
+        _levelOrder(node.children[i], res, level + 1);
+    }
+}
 
-
+function levelOrder(head) {
+    var res = [];
+    _levelOrder(head, res, 0);
+    return res;
+}
 ```
