@@ -170,4 +170,5 @@ function removeDuplicates(arr) {
     return i + 1;
 }
 var arr = [1, 3, 5, 5, 5, 7];
+console.log(removeDuplicates(arr));
 ```
