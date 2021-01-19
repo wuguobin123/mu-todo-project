@@ -607,6 +607,19 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
   }
   return ob
 }
+
+//执行组件实例中data()方法,拿到定义的对象
+export function getData (data: Function, vm: Component): any { 
+  pushTarget()
+  try {
+    return data.call(vm, vm)
+  } catch (e) {
+    handleError(e, vm, `data()`)
+    return {}
+  } finally {
+    popTarget()
+  }
+}
 ```
 
 ```
@@ -682,6 +695,7 @@ export function defineReactive (
 
   //observe()方法对val的类型进行了限制，只对类型为对象或者数组进行了处理。如果val是基本类型的值，那么childOb不存在  
   let childOb = !shallow && observe(val)
+  //注意这里的代码在初始化的时候get和set方法不会执行，这里只是定义。在进行具体渲染时会执行get()方法，修改数据时触发set()方法
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
