@@ -327,43 +327,216 @@ export function updateListeners (
 }
 ```
 
+```
+//初始化渲染相关的函数,将渲染函数转成vnode
+export function initRender (vm: Component) {
+  ...
+  // 将渲染函数转成vnode，该渲染函数是通过编译器将template编译处理之后的结果
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
+  // 将渲染函数转成vnode，对用户定义的渲染函数进行处理
+  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+  ...
+}
+```
 
 ```
-//初始化渲染相关的函数
-export function initRender (vm: Component) {
-  vm._vnode = null // the root of the child tree
-  vm._staticTrees = null // v-once cached trees
-  const options = vm.$options
-  const parentVnode = vm.$vnode = options._parentVnode // the placeholder node in parent tree
-  const renderContext = parentVnode && parentVnode.context
-  vm.$slots = resolveSlots(options._renderChildren, renderContext)
-  vm.$scopedSlots = emptyObject
-  // bind the createElement fn to this instance
-  // so that we get proper render context inside it.
-  // args order: tag, data, children, normalizationType, alwaysNormalize
-  // internal version is used by render functions compiled from templates
-  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
-  // normalization is always applied for the public version, used in
-  // user-written render functions.
-  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+export function initInjections (vm: Component) {
+  //获取vm实例的inject对象中key对应的在父组件中provide的值，返回一个对象
+  const result = resolveInject(vm.$options.inject, vm)
+  if (result) {
+    //调用该方法目的是在调用defineReactive时不进行依赖收集  
+    toggleObserving(false)
+    //将inject中定义的属性和对应值，绑定到当前的vm实例上去
+    Object.keys(result).forEach(key => {
+      if (process.env.NODE_ENV !== 'production') {
+        defineReactive(vm, key, result[key], () => {
+          warn(
+            `Avoid mutating an injected value directly since the changes will be ` +
+            `overwritten whenever the provided component re-renders. ` +
+            `injection being mutated: "${key}"`,
+            vm
+          )
+        })
+      } else {
+        //这里通过vm.key的方式就可以访问到inject中定义的属性值  
+        defineReactive(vm, key, result[key])
+      }
+    })
+    //重新恢复defineReactive执行时的依赖收集
+    toggleObserving(true)
+  }
+}
 
-  // $attrs & $listeners are exposed for easier HOC creation.
-  // they need to be reactive so that HOCs using them are always updated
-  const parentData = parentVnode && parentVnode.data
+//获取inject中对应的父组件中传过来的值，父组件是通过provide进行传值
+export function resolveInject (inject: any, vm: Component): ?Object {
+  if (inject) {
+    const result = Object.create(null)
+    const keys = hasSymbol
+      ? Reflect.ownKeys(inject)
+      : Object.keys(inject)
 
-  /* istanbul ignore else */
-  if (process.env.NODE_ENV !== 'production') {
-    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
-      !isUpdatingChildComponent && warn(`$attrs is readonly.`, vm)
-    }, true)
-    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, () => {
-      !isUpdatingChildComponent && warn(`$listeners is readonly.`, vm)
-    }, true)
-  } else {
-    defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, null, true)
-    defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      if (key === '__ob__') continue
+      //在vm实例化时，会将组件中定义的inject进行格式化处理，返回inject: {app: { from: 'app' }}类似这样的数据格式
+      const provideKey = inject[key].from
+      let source = vm
+      //不断查询当前组件实例的父级实例，得到provideKey对应的值，放到result中，如果找不到继续向上找
+      while (source) {
+        if (source._provided && hasOwn(source._provided, provideKey)) {
+          result[key] = source._provided[provideKey]
+          break
+        }
+        source = source.$parent
+      }
+    }
+    return result
   }
 }
 ```
 
+```
+//对组件实例vm中的data、props、watch、computed、methods进行处理
+export function initState (vm: Component) {
+  vm._watchers = []
+  const opts = vm.$options
+  if (opts.props) initProps(vm, opts.props)
+  if (opts.methods) initMethods(vm, opts.methods)
+  if (opts.data) {
+    initData(vm)
+  } else {
+    observe(vm._data = {}, true /* asRootData */)
+  }
+  if (opts.computed) initComputed(vm, opts.computed)
+  if (opts.watch && opts.watch !== nativeWatch) {
+    initWatch(vm, opts.watch)
+  }
+}
+```
+
+```
+//对props进行初始化
+function initProps (vm: Component, propsOptions: Object) {
+  const propsData = vm.$options.propsData || {}
+  const props = vm._props = {}
+  const keys = vm.$options._propKeys = []
+  const isRoot = !vm.$parent
+  // 如果组件实例不是根实例，设置defineReactive调用时不进行依赖收集
+  if (!isRoot) {
+    toggleObserving(false)
+  }
+  for (const key in propsOptions) {
+    keys.push(key)
+    const value = validateProp(key, propsOptions, propsData, vm)
+    /* istanbul ignore else */
+    if (process.env.NODE_ENV !== 'production') {
+      const hyphenatedKey = hyphenate(key)
+      if (isReservedAttribute(hyphenatedKey) ||
+          config.isReservedAttr(hyphenatedKey)) {
+        warn(
+          `"${hyphenatedKey}" is a reserved attribute and cannot be used as component prop.`,
+          vm
+        )
+      }
+      defineReactive(props, key, value, () => {
+        if (!isRoot && !isUpdatingChildComponent) {
+          warn(
+            `Avoid mutating a prop directly since the value will be ` +
+            `overwritten whenever the parent component re-renders. ` +
+            `Instead, use a data or computed property based on the prop's ` +
+            `value. Prop being mutated: "${key}"`,
+            vm
+          )
+        }
+      })
+    } else {
+      //将属性设置到vm._props对象上，可以通过vm._props.key的形式来访问props中的属性  
+      defineReactive(props, key, value)
+    }
+    //这里使用代理，可以通过vm.key的形式进行访问
+    if (!(key in vm)) {
+      proxy(vm, `_props`, key)
+    }
+  }
+  toggleObserving(true)
+}
+
+//对vm实例上_props属性进行代理，可以通过vm.key的形式进行访问
+export function proxy (target: Object, sourceKey: string, key: string) {
+  sharedPropertyDefinition.get = function proxyGetter () {
+    return this[sourceKey][key]
+  }
+  sharedPropertyDefinition.set = function proxySetter (val) {
+    this[sourceKey][key] = val
+  }
+  Object.defineProperty(target, key, sharedPropertyDefinition)
+}
+
+//校验props属性，包括类型、默认值的
+export function validateProp (
+  key: string,
+  propOptions: Object,
+  propsData: Object,
+  vm?: Component
+): any {
+  const prop = propOptions[key]
+  //判断父组件中是否传入key，如果没有传值则下边会给该key赋一个值
+  const absent = !hasOwn(propsData, key)
+  let value = propsData[key]
+  // 如果props中属性type的值为Boolean，则对value进行处理
+  const booleanIndex = getTypeIndex(Boolean, prop.type)
+  if (booleanIndex > -1) {
+    //如果  
+    if (absent && !hasOwn(prop, 'default')) {
+      value = false
+    } else if (value === '' || value === hyphenate(key)) {
+      // only cast empty string / same name to boolean if
+      // boolean has higher priority
+      const stringIndex = getTypeIndex(String, prop.type)
+      if (stringIndex < 0 || booleanIndex < stringIndex) {
+        value = true
+      }
+    }
+  }
+  // 对默认值进行处理
+  if (value === undefined) {
+    value = getPropDefaultValue(vm, prop, key)
+    const prevShouldObserve = shouldObserve
+    toggleObserving(true)
+    observe(value)
+    toggleObserving(prevShouldObserve)
+  }
+  return value
+}
+
+//通过类型的toString()获取构造函数的字符串，然后使用正则获取字符串类型的具体类型值
+function getType (fn) {
+  const match = fn && fn.toString().match(/^\s*function (\w+)/)
+  return match ? match[1] : ''
+}
+
+//对比两个字符串类型的类型是否相同
+function isSameType (a, b) {
+  return getType(a) === getType(b)
+}
+
+//如果期待类型和传入的值的类型一致返回0，否则返回-1
+function getTypeIndex (type, expectedTypes): number {
+  if (!Array.isArray(expectedTypes)) {
+    return isSameType(expectedTypes, type) ? 0 : -1
+  }
+  for (let i = 0, len = expectedTypes.length; i < len; i++) {
+    if (isSameType(expectedTypes[i], type)) {
+      return i
+    }
+  }
+  return -1
+}
+
+//判断某个对象是否包含某个属性
+const hasOwnProperty = Object.prototype.hasOwnProperty
+export function hasOwn (obj: Object | Array<*>, key: string): boolean {
+  return hasOwnProperty.call(obj, key)
+}
+```
 ### 更新渲染
