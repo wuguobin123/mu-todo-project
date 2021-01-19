@@ -2,7 +2,7 @@ name: schedule-email
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '0 1 * * *' # Change this to your time
+    - cron: '*/3 * * * *'
   push:
     branches:
       - main # Change this to your default branch
