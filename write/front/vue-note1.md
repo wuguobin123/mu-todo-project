@@ -486,7 +486,7 @@ export function validateProp (
   // 如果props中属性type的值为Boolean，则对value进行处理
   const booleanIndex = getTypeIndex(Boolean, prop.type)
   if (booleanIndex > -1) {
-    //如果  
+    //如果父组件没有传入，自身也没有设置default默认值，则设置为false
     if (absent && !hasOwn(prop, 'default')) {
       value = false
     } else if (value === '' || value === hyphenate(key)) {
@@ -538,5 +538,11 @@ const hasOwnProperty = Object.prototype.hasOwnProperty
 export function hasOwn (obj: Object | Array<*>, key: string): boolean {
   return hasOwnProperty.call(obj, key)
 }
+
+//驼峰式转化为-连接的字符串，例如：myNameIsXiaoMi=>my-name-is-xiao-mi
+const hyphenateRE = /\B([A-Z])/g
+export const hyphenate = cached((str: string): string => {
+  return str.replace(hyphenateRE, '-$1').toLowerCase()
+})
 ```
 ### 更新渲染
