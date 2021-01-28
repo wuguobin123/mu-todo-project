@@ -2,7 +2,7 @@ name: schedule-email
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron: '0 1 * * *'
+    - cron: '0 23 * * *'
   push:
     branches:
       - main # Change this to your default branch
@@ -26,7 +26,7 @@ jobs:
         server_port: 465
         username: ${{ secrets.MAIL_USERNAME }}
         password: ${{ secrets.MAIL_PASSWORD }}
-        subject: TODO++
+        subject: todolist
         body: file://out.html
         to: wgblearn@163.com
         from: GitHub Actions
